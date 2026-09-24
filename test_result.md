@@ -102,6 +102,32 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
+# CURRENT REQUEST (2026-09-24, supersedes historical scopes below):
+# FINAL FOLLOW-UP: iteration_12 frontend all PASS; final backend suites11/11 PASS.
+# Manual cover quality control published16 of17 generated (one obscured-face portrait
+# quarantined, original retained). Four local no-AI cleanups published. Total412/437,
+# missing25. Batch56ba... stopped on explicit Budget has been exceeded. No new AI
+# calls after budget, no automatic retry. Details test_reports/iteration_12_followup.md.
+# Functional working=true, needs_retesting=false; remaining covers BLOCKED on credit.
+# User: "Copertine Mancanti: Genera le 41 copertine che ancora mancano con lo stesso stile cinematografico quando ricarichi il credito. Anteprima Rapida: Mostra la card successiva già leggermente ingrandita mentre trascini, per un cambio più fluido". Confirmed proceed.
+# frontend task: Incoming card anticipatory zoom/opacity. implemented=true,
+# working=NA, needs_retesting=true. home-story-deck.tsx StoryLayer now uses live
+# offset/direction + progress*(1-progress), scaleX max1.012, scaleY/opacity
+# boosted ahead of existing linear interpolation. Exact rest/commit geometry,
+# no anticipation on idle nudge, reduced-motion disables additional effect.
+# Test real held drags 25%/50%, reverse/cancel, complete forward/back, boundaries,
+# no accidental reader opening, tap still opens, no loop, filters, narrow viewport.
+# Existing dragged flag must not regress. Screenshot smoke /discover390x844 PASS.
+# backend task: Authorized one-off remaining-cover batch, existing generator
+# unchanged; --limit41 --concurrency1 (no in-flight concurrent charges after stop).
+# Log /tmp/pause-cover-batch-current.log; newest memory/cover_batches report.
+# Generation may still run during tests. Do NOT invoke any additional AI call.
+# Dry-run initially41; compare existing396 refs against NEW report only.
+# Inspect status/budget stop, verify completed new hero/thumb images and sources.
+# TTS/Stripe intentionally disabled. No auth (documented test_credentials.md).
+# testing focus: gesture preview first, then read-only batch validation.
+# agent_communication main: report issues precisely; no tests against old baseline179/373.
+
 # Current cover-generation task (supersedes the older UI entries below):
 # CURRENT 2026-09-24 batch: user explicitly authorized ALL missing covers at WebP84,
 # same existing model/style, preserve pre-existing373. Pilot3 + main20 = 23 new covers.

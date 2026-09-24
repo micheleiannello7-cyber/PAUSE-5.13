@@ -384,3 +384,33 @@ Richiesta utente (IT): all'apertura le copertine arrivavano dopo qualche secondo
   ricaricato 93 copertine locali mancanti in questo storage.
 - Verifica: `test_reports/iteration_11.json` (backend 6/6, frontend tutti i flussi ok; unico MEDIUM = tap dopo drag elastico,
   corretto e ri-verificato manualmente).
+
+## Sessione corrente — Anteprima rapida + copertine mancanti
+- Richiesta utente (IT): generare le41 copertine ancora mancanti nello stesso stile cinematografico con credito disponibile;
+  mostrare la card successiva già leggermente ingrandita durante il trascinamento. Conferma esplicita «Si».
+- `home-story-deck.tsx`: anticipo dello zoom SOLO sulla card in arrivo (anche rientrando nella cronologia),
+  proporzionale al gesto sul thread UI; massimo+1.2% in larghezza, altezza/opacità crescono prima della vecchia
+  interpolazione lineare. Rientro/cancellazione e arrivo al centro restituiscono esattamente scala1.
+  Posizione derivata dai shared values per evitare salti al cambio slot; nudge idle invariato; riduzione movimento
+  disabilita il nuovo anticipo. Navigazione lineare, prefetch/batch, flag dragged e tap restano invariati.
+- Lotto manuale `generate_covers.py --limit41 --concurrency1` con modello/stile preesistenti e WebP84:
+  report `memory/cover_batches/56ba5742cf674cb7a8acbbc14cf85680.json`, baseline396.
+  **17 generate**, arresto immediato per `Budget has been exceeded` su `lez-orientarsi-stelle`; nessuna chiamata AI successiva.
+- Controllo qualità: **16 nuove PUBBLICATE**, **1 esclusa** (volto coperto da banda artificiale:
+  `v8-lez-saying-no-without-guilt-the-6-step-method`). Originale archiviato in `memory/cover_batches/rejected/`,
+  scollegato da MongoDB e rimosso da `covers/` perché lo startup non lo ripristini. Va rigenerato con futuro credito.
+  Il campo `ok=17` è lo storico di generazione, NON il totale pubblicato; `generated` contiene16 record,
+  `published=16`, `rejected` contiene1 record. Nessuna perdita dell'originale già pagato.
+- `retouch_cover_batch.py`: pulizia locale circoscritta alle NUOVE cover: rimossi header artificiali fauna/postura
+  e cornice scacchi con ritagli nativi (nessun upscaling); rimosso lettering inventato sul sito archeologico.
+  Originali conservati in `memory/cover_batches/originals/`; nuove versioni su Object Storage e report aggiornato;
+  guardia baseline, lock e compare-and-set proteggono le preesistenti. Nessuna chiamata AI per queste correzioni.
+- Totale finale **412/437 coperte** (365 generate+47 fotografiche), **25 mancanti**. Le396 iniziali sono intatte.
+- Verifica: `test_reports/iteration_12.json` zoom durante gesto25/50%, annullamento, avanti/indietro, bordo prima card,
+  tap dopo drag, filtri, riduzione movimento e layout390/320px superati. Report originario precede controllo qualità
+  (riporta17 pubblicate/24 mancanti); follow-up `test_reports/iteration_12_followup.md` contiene stato finale corretto.
+  Suite finale `pytest/iter31_final.xml`:11/11 pass dopo ritocchi/esclusione, tutti32 endpoint nuovi hero/thumb validi.
+- P0: nessun bug funzionale aperto nell'anteprima. P1: **25 copertine in attesa di nuovo credito**; non riavviare
+  la generazione senza una successiva richiesta dell'utente. Nessun polling/ripartenza automatica.
+- P2: verifica del gesto su telefono fisico; possibile futura ripresa Home dall'ultima card vista.
+  TTS e Stripe restano disabilitati. Nessuna modifica all'autenticazione (app anonima).

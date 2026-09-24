@@ -2,7 +2,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, { cancelAnimation, Easing, runOnJS, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming, type SharedValue } from "react-native-reanimated";
+import Animated, { cancelAnimation, Easing, runOnJS, useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withSpring, withTiming, type SharedValue } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { StoryPreview } from "@/src/api";
 import { makeStyles } from "@/src/theme";
@@ -144,10 +144,26 @@ function StoryLayer({ story, slot, page, width, left, stride, position, tx, nudg
   position: SharedValue<number>; tx: SharedValue<number>; nudge: SharedValue<number>; onOpen: () => void; onListen?: () => void;
 }) {
   const styles = useStyles();
+  const reducedMotion = useReducedMotion();
   const animatedStyle = useAnimatedStyle(() => {
-    const distance = page - position.value + (tx.value + nudge.value) / stride;
+    const offset = page - position.value;
+    const distance = offset + (tx.value + nudge.value) / stride;
     const side = Math.min(Math.abs(distance), 1);
-    return { opacity: 1 - side * 0.48, transform: [{ translateX: distance * stride }, { scaleY: 1 - side * 0.09 }] };
+    // Solo la card in arrivo anticipa lo zoom: il movimento idle non lo attiva.
+    // Usa la posizione animata, non lo slot React, per evitare salti al cambio card.
+    const incoming = Math.abs(offset) === 1 && offset * tx.value < 0;
+    const progress = incoming && !reducedMotion ? Math.min(Math.abs(tx.value) / stride, 1) : 0;
+    const preview = progress * (1 - progress);
+    // L'anticipo cresce subito, poi si annulla al centro (o tornando indietro).
+    // Zoom orizzontale massimo 1.2%: resta nello spazio tra le card.
+    return {
+      opacity: Math.min(1, 1 - side * 0.48 + preview * 0.48),
+      transform: [
+        { translateX: distance * stride },
+        { scaleX: 1 + preview * 0.048 },
+        { scaleY: Math.min(1, 1 - side * 0.09 + preview * 0.09) },
+      ],
+    };
   });
   return (
     <Animated.View testID={`deck-layer-${slot === 0 ? "active" : slot < 0 ? "previous" : "next"}`} style={[styles.layer, { width, left }, animatedStyle]}>
