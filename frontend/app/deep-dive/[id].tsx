@@ -114,6 +114,10 @@ export default function DeepDive() {
   // La trasformazione in sfondo è completa qui (tutta l'altezza della card:
   // così, scorrendo al primo capitolo, la crescita è distesa e non "scatta").
   const morphEnd = cover.top + cardH;
+  // Quota (nella pagina) del titolo grande: sotto la card, dopo il padding
+  // della scheda. Da qui in su la barra col titolo piccolo resta nascosta,
+  // così tornando all'introduzione la copertina è di nuovo libera.
+  useEffect(() => { bigTitleY.value = coverTop + cardH + spacing.md; }, [coverTop, cardH, bigTitleY]);
   // Ultimo scroll programmatico (apertura su un capitolo, ripresa): solo un
   // movimento del lettore oltre quel punto conta come "gesto" per salvare.
   const autoY = useSharedValue(0);
@@ -325,7 +329,7 @@ export default function DeepDive() {
             <View style={[styles.coverArea, { height: cardH, width: cardW }]} testID="deep-dive-cover-card" />
             <View style={styles.sheet} onLayout={(e) => { const h = Math.ceil(e.nativeEvent.layout.height); if (h > 0 && h !== sheetH) setSheetH(h); }}>
               <View style={styles.sheetInner}>
-                <View style={styles.heroTitleWrap} onLayout={(e) => { bigTitleY.value = Math.round(e.nativeEvent.layout.y); }}>
+                <View style={styles.heroTitleWrap}>
                   <CoverTitle title={story.title} highlight={story.highlight_words} reveal={headerReveal} />
                 </View>
                 <LinearGradient pointerEvents="none" start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} colors={[withAlpha(colors.onGradient, 0.16), withAlpha(colors.onGradient, 0.06), withAlpha(colors.onGradient, 0)]} locations={[0, 0.6, 1]} style={styles.hairline} testID="deep-dive-divider-title" />
