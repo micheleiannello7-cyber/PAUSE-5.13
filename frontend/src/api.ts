@@ -72,11 +72,12 @@ export function categoryIllustrationUrl(cat: Pick<Category, "id" | "illustration
   return categoryArtworkUrl(cat.id, cat.illustration_generated);
 }
 
-export function categoryArtworkUrl(id: string, version: string, cutout = false): string {
+export function categoryArtworkUrl(id: string, version: string, cutout = false, tight = false): string {
   // Content-addressed artwork + a shared delivery revision reset any old
   // cached image/failure state when moving to the new sculptural 3D family.
-  // `cutout` = solo l'oggetto 3D, senza lo sfondo nero dello studio.
-  return `${BASE}/api/category-media/${encodeURIComponent(id)}?v=${encodeURIComponent(version)}&delivery=colorful-3d-v3${cutout ? "&cutout=true&cut=2" : ""}`;
+  // `cutout` = solo l'oggetto 3D, senza lo sfondo nero dello studio;
+  // `tight` = ritaglio stretto sull'oggetto (stessa altezza visiva delle altre icone 3D).
+  return `${BASE}/api/category-media/${encodeURIComponent(id)}?v=${encodeURIComponent(version)}&delivery=colorful-3d-v3${cutout ? "&cutout=true&cut=2" : ""}${cutout && tight ? "&tight=true" : ""}`;
 }
 
 export type Chapter = {
@@ -233,6 +234,13 @@ export const api = {
     if (interests?.length) qs.set("interests", interests.join(","));
     if (exclude?.length) qs.set("exclude", exclude.join(","));
     return req<StoryPreview>(`/discover-next?${qs.toString()}`);
+  },
+  /** Un intero mazzo (fino a 14 storie uniche) in una sola richiesta. */
+  discoverBatch: (user_id: string, interests?: string[], exclude?: string[], count = 7) => {
+    const qs = new URLSearchParams({ user_id, count: String(count) });
+    if (interests?.length) qs.set("interests", interests.join(","));
+    if (exclude?.length) qs.set("exclude", exclude.join(","));
+    return req<StoryPreview[]>(`/discover-batch?${qs.toString()}`);
   },
   story: (id: string) => req<Story>(`/stories/${id}`),
   related: (id: string) => req<StoryPreview[]>(`/stories/${id}/related`),

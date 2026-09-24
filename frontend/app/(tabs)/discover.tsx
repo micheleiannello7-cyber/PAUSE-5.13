@@ -6,7 +6,8 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import Ionicons from "@react-native-vector-icons/ionicons";
 import * as Haptics from "expo-haptics";
-import { api, StoryPreview } from "@/src/api";
+import { Image } from "expo-image";
+import { api, StoryPreview, hasHero, heroUrl } from "@/src/api";
 import { makeStyles, useTheme, spacing, radius, typography } from "@/src/theme";
 import { useUserId } from "@/src/session";
 import { getReadingProgress, ReadingProgress } from "@/src/reading-progress";
@@ -18,6 +19,25 @@ import { HomeCategoryTile } from "@/src/components/home-controls";
 import { HomeStoryDeck } from "@/src/components/home-story-deck";
 import { HomeReadingProgress } from "@/src/components/home-reading-progress";
 import { useI18n } from "@/src/i18n";
+
+const DECK_BATCH = 7;
+// Copertine da avere in cache prima di mostrare il mazzo (attuale + 2 a destra).
+const COVERS_BEFORE_SHOW = 3;
+// Nuovo lotto quando mancano così poche card alla fine della linea.
+const PREFETCH_AHEAD = 3;
+const COVER_WARM_TIMEOUT_MS = 2500;
+
+// Scarica le copertine in cache (memoria+disco). Una rete lenta o un'immagine
+// mancante non deve bloccare la Home: si va avanti comunque dopo il timeout.
+function warmCovers(stories: StoryPreview[]): Promise<void> {
+  const urls = stories.filter(hasHero).map((s) => heroUrl(s, "hero"));
+  if (!urls.length) return Promise.resolve();
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, COVER_WARM_TIMEOUT_MS);
+    Promise.all(urls.map((u) => Image.prefetch(u, "memory-disk").catch(() => false)))
+      .then(() => { clearTimeout(timer); resolve(); });
+  });
+}
 
 export default function Discover() {
   const insets = useSafeAreaInsets();
@@ -48,6 +68,8 @@ export default function Discover() {
   }, [userId]));
   const showResume = !!resume && resume.progress < 0.95 && !userState?.completed_story_ids?.includes(resume.story.id);
 
+  // Il mazzo è una linea temporale: la card aperta è la prima, le successive
+  // stanno a destra e a sinistra restano SOLO quelle già fatte scorrere.
   const [deck, setDeck] = useState<StoryPreview[]>([]);
   const [cursor, setCursor] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -64,15 +86,24 @@ export default function Discover() {
     setError(false);
   }, []);
 
-  const loadMore = useCallback(async (excludeIds: string[]) => {
+  const loadBatch = useCallback(async (excludeIds: string[]) => {
     if (!userId) return;
     const requestGeneration = generation.current;
     setLoading(true);
     try {
-      const story = await api.discoverNext(userId, deckInterests, excludeIds);
-      // A slow response from an old topic must not overwrite a freshly selected filter.
+      // Una sola richiesta per tutto il mazzo, poi copertine già in cache
+      // prima di mostrare le card: niente immagini che compaiono in ritardo.
+      const stories = await api.discoverBatch(userId, deckInterests, excludeIds, DECK_BATCH);
       if (requestGeneration !== generation.current) return;
-      setDeck((prev) => prev.some((item) => item.id === story.id) ? prev : [...prev, story]);
+      const fresh = stories.filter((s) => !excludeIds.includes(s.id));
+      await warmCovers(fresh.slice(0, COVERS_BEFORE_SHOW));
+      if (requestGeneration !== generation.current) return;
+      void warmCovers(fresh.slice(COVERS_BEFORE_SHOW));
+      if (fresh.length < DECK_BATCH) setExhausted(true);
+      setDeck((prev) => {
+        const seen = new Set(prev.map((s) => s.id));
+        return [...prev, ...fresh.filter((s) => !seen.has(s.id))];
+      });
       setError(false);
     } catch {
       if (requestGeneration !== generation.current) return;
@@ -92,10 +123,10 @@ export default function Discover() {
       return;
     }
     if (exhausted || loading || error) return;
-    // Commit a stable seven-story carousel. Appending when the cursor wraps
-    // changes the neighbour behind the user's finger and breaks reverse swipes.
-    if (deck.length < 7) void loadMore(deck.map((s) => s.id));
-  }, [ready, userId, interestsKey, lang, exhausted, loading, error, deck, cursor, loadMore, resetDeck]);
+    // Si aggiunge solo in coda (mai accanto al dito): il prossimo lotto parte
+    // quando mancano poche card alla fine, così la card a destra c'è sempre.
+    if (deck.length === 0 || cursor >= deck.length - PREFETCH_AHEAD) void loadBatch(deck.map((s) => s.id));
+  }, [ready, userId, interestsKey, lang, exhausted, loading, error, deck, cursor, loadBatch, resetDeck]);
 
   const tileCats = useMemo(() => {
     const all = categories ?? [];
@@ -131,7 +162,7 @@ export default function Discover() {
             <Text testID="discover-empty-message" style={styles.emptyText}>{t.explored_all_sub}</Text>
             <GradientButton label={t.restart} icon="refresh" onPress={resetDeck} testID="reset-skipped" style={styles.resetBtn} />
           </View>
-        ) : deck[cursor] && (deck.length >= 7 || exhausted) ? (
+        ) : deck[cursor] ? (
           <HomeStoryDeck key={`${interestsKey}|${lang}|${generation.current}`} deck={deck} cursor={cursor} width={width} height={cardHeight} onChange={setCursor} onOpen={openStory}
             onListen={userState?.is_premium ? listenStory : undefined} />
         ) : (

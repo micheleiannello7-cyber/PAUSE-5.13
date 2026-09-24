@@ -9,17 +9,23 @@ import { makeStyles } from "@/src/theme";
 import { HomeStoryCard } from "./home-story-card";
 
 type Props = { deck: StoryPreview[]; cursor: number; width: number; height: number; onChange: (index: number) => void; onOpen: (story: StoryPreview) => void; onListen?: (story: StoryPreview) => void };
-const wrap = (index: number, length: number) => (index + length) % length;
 
+// Linea temporale, non anello: a sinistra ci sono solo le card già fatte
+// scorrere, a destra quelle ancora da vedere. Alla prima apertura nulla a sinistra.
 export function HomeStoryDeck({ deck, cursor, width, height, onChange, onOpen, onListen }: Props) {
   const styles = useStyles();
   const cardWidth = width * 0.866;
   const stride = cardWidth + width * 0.021;
+  const canPrev = cursor > 0;
+  const canNext = cursor < deck.length - 1;
   const position = useSharedValue(0);
   const tx = useSharedValue(0);
   // Idle hint: a small sideways sway of the whole deck after 7s of inactivity.
   const nudge = useSharedValue(0);
   const busy = useSharedValue(false);
+  // Vero appena il dito si sposta: un trascinamento (anche elastico ai bordi)
+  // non deve mai contare come tocco che apre la storia.
+  const dragged = useSharedValue(false);
   const moving = useRef(false);
   const mounted = useRef(true);
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -27,7 +33,7 @@ export function HomeStoryDeck({ deck, cursor, width, height, onChange, onOpen, o
 
   const armIdle = useCallback(() => {
     if (idleTimer.current) clearTimeout(idleTimer.current);
-    if (deck.length < 2) return;
+    if (!canNext) return;
     idleTimer.current = setTimeout(function sway() {
       if (!mounted.current) return;
       if (!moving.current && tx.value === 0) {
@@ -39,7 +45,7 @@ export function HomeStoryDeck({ deck, cursor, width, height, onChange, onOpen, o
       }
       idleTimer.current = setTimeout(sway, 7000);
     }, 7000);
-  }, [deck.length, stride, tx, nudge]);
+  }, [canNext, stride, tx, nudge]);
   const stopNudge = useCallback(() => {
     cancelAnimation(nudge);
     nudge.value = withTiming(0, { duration: 140 });
@@ -71,8 +77,9 @@ export function HomeStoryDeck({ deck, cursor, width, height, onChange, onOpen, o
   }, [virtualPage, busy]);
 
   const move = useCallback((direction: number) => {
-    if (moving.current || deck.length < 2) return;
-    const target = wrap(cursor + direction, deck.length);
+    if (moving.current) return;
+    const target = cursor + direction;
+    if (target < 0 || target >= deck.length) return;
     const nextPage = virtualPage + direction;
     moving.current = true;
     busy.value = true;
@@ -90,17 +97,23 @@ export function HomeStoryDeck({ deck, cursor, width, height, onChange, onOpen, o
   }, [cursor, deck.length, virtualPage, stride, busy, tx, position, finish, nudge, armIdle]);
 
   const gesture = useMemo(() => Gesture.Pan().activeOffsetX([-10, 10]).failOffsetY([-18, 18])
-    .onBegin(() => { runOnJS(stopNudge)(); })
-    .onUpdate((event) => { if (!busy.value) tx.value = event.translationX * (deck.length > 1 ? 1 : 0.16); })
+    .onBegin(() => { dragged.value = false; runOnJS(stopNudge)(); })
+    .onUpdate((event) => {
+      if (busy.value) return;
+      if (Math.abs(event.translationX) > 8) dragged.value = true;
+      // Oltre i bordi della linea (inizio o fine) la card resiste: elastico, non scorre.
+      const blocked = (event.translationX > 0 && !canPrev) || (event.translationX < 0 && !canNext);
+      tx.value = event.translationX * (blocked ? 0.16 : 1);
+    })
     .onEnd((event) => {
       if (busy.value) return;
-      if (deck.length > 1 && (event.translationX < -stride * 0.17 || event.velocityX < -450)) runOnJS(move)(1);
-      else if (deck.length > 1 && (event.translationX > stride * 0.17 || event.velocityX > 450)) runOnJS(move)(-1);
+      if (canNext && (event.translationX < -stride * 0.17 || event.velocityX < -450)) runOnJS(move)(1);
+      else if (canPrev && (event.translationX > stride * 0.17 || event.velocityX > 450)) runOnJS(move)(-1);
       else tx.value = withSpring(0, { damping: 24, stiffness: 220 });
     })
-    .onFinalize((_event, success) => { if (!success && !busy.value) tx.value = withSpring(0); }), [busy, tx, deck.length, stride, move, stopNudge]);
+    .onFinalize((_event, success) => { if (!success && !busy.value) tx.value = withSpring(0); }), [busy, tx, dragged, canPrev, canNext, stride, move, stopNudge]);
 
-  const slots = deck.length > 1 ? [-1, 0, 1] : [0];
+  const slots = [canPrev ? -1 : null, 0, canNext ? 1 : null].filter((s): s is number => s !== null);
   const dotCount = Math.min(deck.length, 7);
   const dotStart = Math.max(0, Math.min(cursor - 3, deck.length - dotCount));
   return (
@@ -111,11 +124,11 @@ export function HomeStoryDeck({ deck, cursor, width, height, onChange, onOpen, o
           accessibilityActions={[{ name: "increment" }, { name: "decrement" }]}
           onAccessibilityAction={({ nativeEvent }) => move(nativeEvent.actionName === "increment" ? 1 : -1)}>
           {slots.map((slot) => {
-            const story = deck[wrap(cursor + slot, deck.length)];
+            const story = deck[cursor + slot];
             return <StoryLayer key={`${virtualPage + slot}-${story.id}`} story={story} slot={slot} page={virtualPage + slot}
               width={cardWidth} left={(width - cardWidth) / 2} stride={stride} position={position} tx={tx} nudge={nudge}
-              onOpen={() => { if (!moving.current) onOpen(story); }}
-              onListen={onListen ? () => { if (!moving.current) onListen(story); } : undefined} />;
+              onOpen={() => { if (!moving.current && !dragged.value) onOpen(story); }}
+              onListen={onListen ? () => { if (!moving.current && !dragged.value) onListen(story); } : undefined} />;
           })}
         </View>
       </GestureDetector>

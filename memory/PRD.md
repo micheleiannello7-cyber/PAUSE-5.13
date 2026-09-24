@@ -365,3 +365,22 @@ Disabilitati per scelta utente: TTS reale e Stripe (codice presente).
 - Backend riavviato: auto-seed 12 categorie / 437 storie. /api/health → ok, db true. /api/categories = 12, /api/stories OK.
 - Expo riavviato: Metro su :3000, intro PAUSE (montagna/lago) renderizza sul dominio pubblico.
 - Scelte utente confermate: TTS OpenAI e Stripe DISATTIVATI; resto attivo con chiave universale Emergent. Nessuna nuova integrazione a runtime.
+
+## Home: copertine veloci + cronologia a sinistra (fork, Sep 2026)
+Richiesta utente (IT): all'apertura le copertine arrivavano dopo qualche secondo; a sinistra non devono comparire card
+"future", solo storie già fatte scorrere. Ripreso da sessione interrotta (crediti): le modifiche precedenti non esistevano più.
+- Ripristinate le icone 3D categoria nell'Object Storage (`python backend/restore_category_art.py`, da rifare dopo ogni fork).
+- `api.ts`: `discoverBatch` (endpoint `/api/discover-batch`, già presente nel backend ma non usato). `categoryArtworkUrl(..., tight)`.
+- `discover.tsx`: UNA richiesta per il mazzo (7 storie) invece di 7 `discover-next` in serie; `warmCovers` precarica con
+  `Image.prefetch` le prime 3 copertine (timeout 2.5s) prima di mostrare le card, il resto in background. Il mazzo si mostra
+  appena c'è la prima card; nuovo lotto in coda quando mancano ≤3 card alla fine (esclude gli id già nel mazzo).
+- `home-story-deck.tsx`: linea temporale, non anello. Slot "previous" solo se cursor>0, "next" solo se esiste; ai bordi il
+  trascinamento è elastico (×0.16) senza cambiare card; nudge idle solo se c'è una card a destra; flag `dragged` (shared
+  value) impedisce che un trascinamento (anche elastico) apra la storia (bug trovato dal testing agent su web).
+- `story-info-grid.tsx` + `CategoryArtMark`: icona categoria con ritaglio stretto (`tight=true`, riquadro 46×60 contain)
+  → stessa altezza visiva di lampadina/libri/orologio; tessere allineate in alto, nomi lunghi su 2 righe.
+- Backend `warm_media_cache()` in `sync_assets_in_background`: cache disco di copertine (hero+thumb) e icone categoria
+  riscaldata all'avvio (710 file) → prima richiesta senza round-trip all'Object Storage. `covers_sync` ha anche
+  ricaricato 93 copertine locali mancanti in questo storage.
+- Verifica: `test_reports/iteration_11.json` (backend 6/6, frontend tutti i flussi ok; unico MEDIUM = tap dopo drag elastico,
+  corretto e ri-verificato manualmente).

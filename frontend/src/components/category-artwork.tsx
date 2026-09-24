@@ -59,12 +59,12 @@ const useStyles = makeStyles((colors) => ({
 
 // Icona 3D della categoria "nuda" (senza fondo né sfumatura), per badge e
 // pillole: stessa immagine della Home; se non carica, torna l'icona a linea.
-export function CategoryArtMark({ categoryId, color, size, plain = false, testID }: { categoryId: string; color: string; size: number; /** Senza piastrella scura dietro: solo l'oggetto 3D. */ plain?: boolean; testID: string }) {
+export function CategoryArtMark({ categoryId, color, size, plain = false, tight = false, aspect = 1, testID }: { categoryId: string; color: string; size: number; /** Senza piastrella scura dietro: solo l'oggetto 3D. */ plain?: boolean; /** Ritaglio stretto sull'oggetto: riempie il riquadro come le altre icone 3D. */ tight?: boolean; /** Larghezza/altezza del riquadro: >1 lascia agli oggetti larghi (es. pianeta) l'altezza piena. */ aspect?: number; testID: string }) {
   const { colors } = useTheme();
   const [failed, setFailed] = useState(false);
   if (failed) return <CategoryIcon categoryId={categoryId} color={color} highlightColor={colors.onGradient} size={Math.round(size * 0.7)} testID={`${testID}-line-icon`} />;
   return (
-    <Image testID={testID} source={{ uri: categoryArtworkUrl(categoryId, ART_VERSION, plain) }} style={{ width: size, height: size, borderRadius: plain ? 0 : Math.round(size * 0.3), backgroundColor: plain ? "transparent" : colors.artworkSurface }}
+    <Image testID={testID} source={{ uri: categoryArtworkUrl(categoryId, ART_VERSION, plain, tight) }} style={{ width: Math.round(size * aspect), height: size, borderRadius: plain ? 0 : Math.round(size * 0.3), backgroundColor: plain ? "transparent" : colors.artworkSurface }}
       contentFit="contain" cachePolicy="memory-disk" transition={0} onError={() => setFailed(true)} />
   );
 }

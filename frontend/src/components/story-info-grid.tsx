@@ -25,7 +25,10 @@ export function StoryInfoGrid({ story, minutes, testID = "story-info-grid" }: { 
     { id: "kind", value: lesson ? t.lesson_badge : t.curiosity_badge, tint: lesson ? colors.cyan : colors.warning,
       icon: <KindIcon kind={lesson ? "lessons" : "stories"} size={ICON} glow={false} testID={`${testID}-kind-icon`} /> },
     { id: "category", value: category, tint: story.category_color,
-      icon: <CategoryArtMark categoryId={story.category_id} color={story.category_color} size={ICON} plain testID={`${testID}-category-icon`} /> },
+      // Ritaglio stretto (senza i margini trasparenti dello studio) in un
+      // riquadro un po' più largo che alto: anche gli oggetti larghi (pianeta)
+      // arrivano all'altezza di lampadina/libri e orologio, senza tagli.
+      icon: <CategoryArtMark categoryId={story.category_id} color={story.category_color} size={ICON + 2} aspect={1.3} plain tight testID={`${testID}-category-icon`} /> },
     { id: "time", value: `${minutes} ${t.min}`, tint: colors.brandSecondary,
       icon: <Image source={CLOCK} style={{ width: ICON + 2, height: ICON + 2 }} contentFit="contain" transition={0} testID={`${testID}-time-icon`} /> },
   ];
@@ -57,11 +60,13 @@ const useStyles = makeStyles((colors) => ({
   grid: { flexDirection: "row", gap: spacing.sm + 2 },
   cell: {
     flex: 1, minHeight: 88, paddingTop: spacing.sm + 2, paddingBottom: spacing.sm + 2, paddingHorizontal: spacing.xs, gap: 6,
-    alignItems: "center", justifyContent: "center", borderRadius: 20, overflow: "hidden",
+    alignItems: "center", justifyContent: "flex-start", borderRadius: 20, overflow: "hidden",
     backgroundColor: withAlpha(colors.onGradient, 0.04), borderWidth: 1, borderColor: withAlpha(colors.onGradient, 0.16),
     boxShadow: `0px 10px 24px ${colors.glassShadow}` as any,
   },
   shine: { position: "absolute", top: 0, left: 0, right: 0, height: 28 },
   iconWrap: { height: ICON, alignItems: "center", justifyContent: "center" },
-  value: { color: colors.textWarm, fontFamily: typography.bodyBold, fontSize: 13.5, lineHeight: 16, textAlign: "center" },
+  // I nomi lunghi vanno a capo (2 righe) senza spostare l'icona: le tre
+  // tessere restano allineate in alto e alte uguali.
+  value: { color: colors.textWarm, fontFamily: typography.bodyBold, fontSize: 13.5, lineHeight: 16, textAlign: "center", alignSelf: "stretch" },
 }));

@@ -1558,6 +1558,12 @@ async def sync_assets_in_background():
         logger.info("Off-topic covers excluded: %s", len(await apply_editorial_exclusions(db)))
     except Exception:
         logger.exception("Reviewed cover restore failed")
+    # Cache disco delle copertine e delle icone categoria riscaldata subito:
+    # la prima apertura della Home non aspetta l'Object Storage.
+    try:
+        logger.info("Media cache warm-up: %s files", await warm_media_cache())
+    except Exception:
+        logger.exception("Media cache warm-up failed")
     # Audio assets: metadata indexes, then adopt every legacy mp3 (disk or
     # storage) into `tts_assets` so it is reused instead of regenerated.
     try:
@@ -1569,6 +1575,23 @@ async def sync_assets_in_background():
         logger.info("TTS legacy adoption: %s", await adopt_legacy_assets(db, localized))
     except Exception:
         logger.exception("TTS asset migration failed")
+
+async def warm_media_cache() -> int:
+    from media_cache import cached_object
+    paths = []
+    async for doc in db.categories.find({"illustration_generated": {"$ne": None}}, {"_id": 0, "illustration_generated": 1}):
+        paths.append(doc["illustration_generated"])
+    async for doc in db.stories.find({"hero_image_generated": {"$ne": None}}, {"_id": 0, "hero_image_generated": 1, "hero_image_thumb": 1}):
+        paths.extend(p for p in (doc.get("hero_image_generated"), doc.get("hero_image_thumb")) if p)
+    warmed = 0
+    for path in paths:
+        try:
+            await cached_object(path)
+            warmed += 1
+        except HTTPException:
+            continue
+    return warmed
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
