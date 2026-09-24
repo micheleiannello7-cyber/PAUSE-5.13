@@ -7,7 +7,7 @@ import Ionicons from "@react-native-vector-icons/ionicons";
 import { StoryPreview, isLesson } from "@/src/api";
 import { makeStyles, typography, useTheme } from "@/src/theme";
 import { useI18n } from "@/src/i18n";
-import { CategoryIcon } from "./category-icon";
+import { CategoryArtMark } from "./category-artwork";
 import { KindIcon } from "./kind-icon";
 
 export function StoryMetaChips({
@@ -36,7 +36,7 @@ export function StoryMetaChips({
         </View>
         <View style={styles.divider} />
         <View testID={`${idPrefix}-category`} style={styles.category}>
-          <CategoryIcon categoryId={story.category_id} color={story.category_color} highlightColor={colors.onGradient} size={13} testID={`${idPrefix}-category-icon`} />
+          <CategoryArtMark categoryId={story.category_id} color={story.category_color} size={16} aspect={1.25} plain tight testID={`${idPrefix}-category-icon`} />
           <Text testID={`${idPrefix}-category-label`} style={styles.categoryText} numberOfLines={1}>{category}</Text>
         </View>
       </View>

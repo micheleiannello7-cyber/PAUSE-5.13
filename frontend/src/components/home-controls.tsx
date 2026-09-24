@@ -15,7 +15,7 @@ export function HomeCategoryTile({ cat, active, onPress, size }: {
       testID={`home-cat-${cat.id}`} onPress={onPress}
       accessibilityRole="button" accessibilityLabel={cat.name}
       accessibilityState={{ selected: active }}
-      style={({ pressed }) => [styles.tile, { width: size, height: size * 1.4, borderColor: withAlpha(colors.onGradient, 0.1) }, active && {
+      style={({ pressed }) => [styles.tile, { width: size, height: Math.round(size * 1.12), borderColor: withAlpha(colors.onGradient, 0.1) }, active && {
         borderColor: withAlpha(cat.color, 0.85), backgroundColor: cat.color + "12",
       }, pressed && styles.pressed]}
     >
@@ -47,14 +47,14 @@ export function HomeNavButton({ direction, disabled, onPress, label }: {
 
 const useStyles = makeStyles((colors) => ({
   tile: {
-    paddingBottom: 7, paddingHorizontal: 2,
+    paddingBottom: 5, paddingHorizontal: 2,
     borderRadius: radius.md, backgroundColor: colors.surfaceSecondary,
     borderWidth: 1, borderColor: colors.glassBorderStrong, alignItems: "center", justifyContent: "flex-end", overflow: "hidden",
   },
   highlight: { position: "absolute", top: 0, left: 12, right: 12, height: 1, backgroundColor: colors.glassHighlight },
   check: { position: "absolute", top: 6, right: 6, width: 17, height: 17, borderRadius: 5, alignItems: "center", justifyContent: "center" },
   checkGlyph: { color: colors.artworkSurface },
-  tileNameWrap: { height: 30, alignItems: "center", justifyContent: "center", alignSelf: "stretch" },
+  tileNameWrap: { height: 26, alignItems: "center", justifyContent: "center", alignSelf: "stretch" },
   tileName: { color: colors.onGradient, fontFamily: typography.bodyBold, fontSize: 10.5, lineHeight: 13, textAlign: "center" },
   arrow: {
     width: 48, height: 48, borderRadius: radius.md, alignItems: "center", justifyContent: "center",

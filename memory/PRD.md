@@ -414,3 +414,8 @@ Richiesta utente (IT): all'apertura le copertine arrivavano dopo qualche secondo
   la generazione senza una successiva richiesta dell'utente. Nessun polling/ripartenza automatica.
 - P2: verifica del gesto su telefono fisico; possibile futura ripresa Home dall'ultima card vista.
   TTS e Stripe restano disabilitati. Nessuna modifica all'autenticazione (app anonima).
+
+## Aggiornamento UI (giugno 2026)
+- Home: tessere categoria più basse (altezza = 1.12× larghezza), etichetta ravvicinata all'icona.
+- Card Home: pillola categoria usa l'icona 3D attuale (`CategoryArtMark` plain/tight) al posto della vecchia icona a linea.
+- Presentazione storia: lampadina/libri ingranditi (compensano i margini trasparenti del PNG) per allinearsi alle altre due tessere; copertina più alta (fino a 1.02× larghezza) per usare lo spazio vuoto in basso.

@@ -23,7 +23,9 @@ export function StoryInfoGrid({ story, minutes, testID = "story-info-grid" }: { 
   const category = story.category_name.split("·")[0].trim();
   const cells = [
     { id: "kind", value: lesson ? t.lesson_badge : t.curiosity_badge, tint: lesson ? colors.cyan : colors.warning,
-      icon: <KindIcon kind={lesson ? "lessons" : "stories"} size={ICON} glow={false} testID={`${testID}-kind-icon`} /> },
+      // Il PNG di lampadina/libri ha margini trasparenti (~15%): la si
+      // ingrandisce perché l'oggetto visibile arrivi all'altezza degli altri due.
+      icon: <KindIcon kind={lesson ? "lessons" : "stories"} size={ICON + 12} glow={false} testID={`${testID}-kind-icon`} /> },
     { id: "category", value: category, tint: story.category_color,
       // Ritaglio stretto (senza i margini trasparenti dello studio) in un
       // riquadro un po' più largo che alto: anche gli oggetti larghi (pianeta)
@@ -65,7 +67,7 @@ const useStyles = makeStyles((colors) => ({
     boxShadow: `0px 10px 24px ${colors.glassShadow}` as any,
   },
   shine: { position: "absolute", top: 0, left: 0, right: 0, height: 28 },
-  iconWrap: { height: ICON, alignItems: "center", justifyContent: "center" },
+  iconWrap: { height: ICON + 4, alignItems: "center", justifyContent: "center" },
   // I nomi lunghi vanno a capo (2 righe) senza spostare l'icona: le tre
   // tessere restano allineate in alto e alte uguali.
   value: { color: colors.textWarm, fontFamily: typography.bodyBold, fontSize: 13.5, lineHeight: 16, textAlign: "center", alignSelf: "stretch" },

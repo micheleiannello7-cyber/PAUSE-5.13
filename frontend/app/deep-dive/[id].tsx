@@ -105,7 +105,9 @@ export default function DeepDive() {
   // presentazione sta sempre in una pagina, anche su schermi bassi.
   const coverTop = insets.top + spacing.lg;
   const pageBottom = insets.bottom + spacing.lg;
-  const cardH = Math.max(150, Math.min(Math.round(cardW * 0.72), pageH - coverTop - pageBottom - 440));
+  // Copertina alta quanto lo spazio libero lo consente (fino a un quadrato
+  // pieno), lasciando sotto quel che serve a titolo, intro, scheda e tasti.
+  const cardH = Math.max(150, Math.min(Math.round(cardW * 1.02), pageH - coverTop - pageBottom - 450));
   const cover: CoverFrame = { top: coverTop, left: (winW - columnW) / 2 + spacing.xl, width: cardW, height: cardH, radius: 22 };
   // La trasformazione in sfondo è completa qui.
   const morphEnd = cover.top + Math.round(cardH * 0.75);
@@ -392,7 +394,7 @@ const useStyles = makeStyles((colors: ThemeColors) => ({
     color: colors.textWarm, fontFamily: typography.displayBold, fontSize: 27, lineHeight: 32, letterSpacing: -0.6,
     textShadowColor: withAlpha(colors.surface, 0.9), textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 14,
   },
-  sheet: { width: "100%", paddingBottom: spacing.xxl },
+  sheet: { width: "100%", paddingBottom: spacing.md },
   sheetInner: { width: "100%", maxWidth: READER_MAX_W, alignSelf: "center", paddingHorizontal: spacing.xl, paddingTop: spacing.md, gap: spacing.lg },
   introBlock: { gap: spacing.sm },
   // Occhiello "INTRODUZIONE": piccolo e luminoso, sopra l'aggancio.
