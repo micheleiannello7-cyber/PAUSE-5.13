@@ -19,7 +19,7 @@ const ART = {
 const ICON = 38;
 
 export function IntroCtaButton({ label, icon, onPress, testID, style, loading = false }: {
-  label: string; icon: keyof typeof ART; onPress: () => void; testID: string; style?: StyleProp<ViewStyle>; loading?: boolean;
+  label: string; /** Senza icona: pulsante solo testo, più pulito. */ icon?: keyof typeof ART; onPress: () => void; testID: string; style?: StyleProp<ViewStyle>; loading?: boolean;
 }) {
   const styles = useStyles();
   const { colors, scheme } = useTheme();
@@ -28,6 +28,7 @@ export function IntroCtaButton({ label, icon, onPress, testID, style, loading = 
   const glowColor = icon === "book" ? colors.cyan : colors.brand;
 
   const press = () => {
+    if (!icon) { onPress(); return; }
     bounce.value = withSequence(withTiming(1.12, { duration: 150, easing: Easing.out(Easing.quad) }), withDelay(60, withSpring(1, { damping: 9, stiffness: 170 })));
     if (icon !== "book") { onPress(); return; }
     flip.value = 0;
@@ -53,10 +54,10 @@ export function IntroCtaButton({ label, icon, onPress, testID, style, loading = 
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ busy: loading }}
-      style={({ pressed }) => [styles.button, pressed && styles.pressed, style]}
+      style={({ pressed }) => [styles.button, !icon && styles.buttonPlain, pressed && styles.pressed, style]}
     >
       <BlurView pointerEvents="none" tint={scheme === "dark" ? "dark" : "light"} intensity={30} style={StyleSheet.absoluteFill} />
-      <View style={styles.iconWrap}>
+      {icon ? <View style={styles.iconWrap}>
         <Animated.View pointerEvents="none" style={[styles.glow, { backgroundColor: withAlpha(glowColor, 0.28), boxShadow: `0px 0px 18px ${withAlpha(glowColor, 0.8)}` as any }, glowStyle]} />
         {loading ? <ActivityIndicator color={colors.textWarm} size="small" /> : (
           <Animated.View style={[styles.art, artStyle]}>
@@ -69,8 +70,9 @@ export function IntroCtaButton({ label, icon, onPress, testID, style, loading = 
             ) : null}
           </Animated.View>
         )}
-      </View>
-      <Text testID={`${testID}-label`} style={styles.label} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>{label}</Text>
+      </View> : null}
+      {!icon && loading ? <ActivityIndicator color={colors.textWarm} size="small" /> :
+        <Text testID={`${testID}-label`} style={[styles.label, !icon && styles.labelPlain]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>{label}</Text>}
     </Pressable>
   );
 }
@@ -83,6 +85,8 @@ const useStyles = makeStyles((colors) => ({
     boxShadow: `0px 8px 24px ${colors.glassShadow}` as any,
   },
   pressed: { opacity: 0.88, transform: [{ scale: 0.985 }] },
+  buttonPlain: { paddingHorizontal: 20 },
+  labelPlain: { fontSize: 15, lineHeight: 19, letterSpacing: 0.2 },
   iconWrap: { width: ICON + 4, height: ICON + 4, alignItems: "center", justifyContent: "center" },
   glow: { position: "absolute", width: ICON * 0.6, height: ICON * 0.6, borderRadius: ICON * 0.3 },
   art: { width: ICON, height: ICON },

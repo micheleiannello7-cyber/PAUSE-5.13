@@ -328,6 +328,7 @@ export default function DeepDive() {
                 <View style={styles.heroTitleWrap} onLayout={(e) => { bigTitleY.value = Math.round(e.nativeEvent.layout.y); }}>
                   <CoverTitle title={story.title} highlight={story.highlight_words} reveal={headerReveal} />
                 </View>
+                <LinearGradient pointerEvents="none" start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} colors={[withAlpha(colors.onGradient, 0.16), withAlpha(colors.onGradient, 0.06), withAlpha(colors.onGradient, 0)]} locations={[0, 0.6, 1]} style={styles.hairline} testID="deep-dive-divider-title" />
                 <View style={styles.introBlock}>
                   <View style={styles.introEyebrowRow}>
                     <View style={styles.introDot} />
@@ -335,9 +336,10 @@ export default function DeepDive() {
                   </View>
                   <Text style={[styles.hook, compact === 1 && styles.hookCompact, compact === 2 && styles.hookTiny]} testID="deep-dive-hook">{story.hook}</Text>
                 </View>
+                <LinearGradient pointerEvents="none" start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} colors={[withAlpha(colors.onGradient, 0.16), withAlpha(colors.onGradient, 0.06), withAlpha(colors.onGradient, 0)]} locations={[0, 0.6, 1]} style={styles.hairline} testID="deep-dive-divider-intro" />
                 <StoryInfoGrid story={story} minutes={story.deep_dive_time_min} />
                 <View style={styles.ctaRow}>
-                  <IntroCtaButton icon="book" label={t.deep_start} onPress={() => { markTouched(); scrollToSection(1); }} testID="deep-dive-start" style={styles.cta} />
+                  <IntroCtaButton label={t.deep_start} onPress={() => { markTouched(); scrollToSection(1); }} testID="deep-dive-start" style={styles.cta} />
                   {isPremium ? <IntroListenButton onListen={openAudio} style={styles.cta} /> : null}
                 </View>
               </View>
@@ -382,14 +384,17 @@ export default function DeepDive() {
 }
 
 // Titolo intero sulla copertina (prima schermata): grande, su più righe, con
-// le parole chiave nel colore del tema. Sfuma via mentre scorre sotto la barra,
-// dove lo stesso titolo ricompare in piccolo (nessun doppione a schermo).
+// le parole chiave nel colore del tema. Non viene mai troncato: i titoli
+// lunghi scendono di corpo (e la copertina sopra si adatta di conseguenza).
+// Sfuma via mentre scorre sotto la barra, dove ricompare in piccolo.
 function CoverTitle({ title, highlight, reveal }: { title: string; highlight: string[]; reveal: SharedValue<number> }) {
   const styles = useStyles();
   const fade = useAnimatedStyle(() => ({ opacity: 1 - reveal.value }));
+  const n = title.length;
+  const fontSize = n > 70 ? 21 : n > 55 ? 23 : n > 40 ? 25 : 27;
   return (
     <Animated.View style={fade}>
-      <HighlightedTitle title={title} highlight={highlight} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.coverTitle} testID="deep-dive-cover-title" />
+      <HighlightedTitle title={title} highlight={highlight} style={[styles.coverTitle, { fontSize, lineHeight: Math.round(fontSize * 1.18) }]} testID="deep-dive-cover-title" />
     </Animated.View>
   );
 }
@@ -404,9 +409,11 @@ const useStyles = makeStyles((colors: ThemeColors) => ({
   coverArea: { alignSelf: "center" },
   heroTitleWrap: { width: "100%" },
   coverTitle: {
-    color: colors.textWarm, fontFamily: typography.displayBold, fontSize: 27, lineHeight: 32, letterSpacing: -0.6,
+    color: colors.textWarm, fontFamily: typography.displayBold, letterSpacing: -0.6,
     textShadowColor: withAlpha(colors.surface, 0.9), textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 14,
   },
+  // Filo di luce sottile tra titolo, introduzione e scheda: separa senza pesare.
+  hairline: { height: 1, alignSelf: "stretch" },
   sheet: { width: "100%", paddingBottom: spacing.md },
   sheetInner: { width: "100%", maxWidth: READER_MAX_W, alignSelf: "center", paddingHorizontal: spacing.xl, paddingTop: spacing.md, gap: spacing.lg },
   introBlock: { gap: spacing.sm },

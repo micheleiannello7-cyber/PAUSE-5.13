@@ -54,13 +54,11 @@ export function ReaderHeader({
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.solid, bg]} />
       <View style={styles.row}>
         <Animated.View style={[styles.center, corner ? styles.centerWithCorner : null, show]} pointerEvents="none" testID="reader-progress">
+          {/* Mai troncato: i titoli lunghi scendono di corpo e restano dentro l'altezza della barra. */}
           <HighlightedTitle
             title={title}
             highlight={highlight}
-            numberOfLines={2}
-            adjustsFontSizeToFit
-            minimumFontScale={0.8}
-            style={styles.title}
+            style={[styles.title, title.length > 70 ? styles.titleXs : title.length > 55 ? styles.titleSm : title.length > 40 ? styles.titleMd : null]}
             testID="reader-header-title"
           />
           <View style={styles.progressRow}>
@@ -102,6 +100,9 @@ const useStyles = makeStyles((colors) => ({
     color: colors.textWarm, fontFamily: typography.displayBold, fontSize: 19, lineHeight: 24, letterSpacing: -0.4, textAlign: "center",
     textShadowColor: withAlpha(colors.surface, 0.75), textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8,
   },
+  titleMd: { fontSize: 16.5, lineHeight: 20 },
+  titleSm: { fontSize: 14.5, lineHeight: 18 },
+  titleXs: { fontSize: 13, lineHeight: 16 },
   progressRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   label: {
     color: colors.cyan, fontFamily: typography.bodyBold,
