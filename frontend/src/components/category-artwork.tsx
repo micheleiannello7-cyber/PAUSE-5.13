@@ -31,7 +31,7 @@ function Artwork({ category, uri, testID, wide = false, compact = false, cornerR
     <View testID={testID} style={[styles.fill, { borderRadius: cornerRadius }]} accessibilityState={{ busy: showImage && !loaded }}>
       {(!showImage || !loaded) ? (
         <View style={[imageStyle, styles.center]} testID={`${testID}-fallback`}>
-          <CategoryIcon categoryId={category.id} color={category.color} highlightColor={colors.onGradient} size={compact ? 28 : 35} testID={`${testID}-line-icon`} />
+          <CategoryIcon categoryId={category.id} color={category.color} highlightColor={colors.onGradient} size={compact ? 34 : 35} testID={`${testID}-line-icon`} />
         </View>
       ) : null}
       {showImage ? <View style={imageStyle} pointerEvents="none">
@@ -52,7 +52,7 @@ function Artwork({ category, uri, testID, wide = false, compact = false, cornerR
 const useStyles = makeStyles((colors) => ({
   fill: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.artworkSurface, overflow: "hidden", pointerEvents: "none" },
   image: { position: "absolute", top: -2, left: "5%", width: "90%", aspectRatio: 1 },
-  compactImage: { top: 2, left: "16%", width: "68%" },
+  compactImage: { top: 0, left: "9%", width: "82%" },
   bannerImage: { position: "absolute", top: -9, right: 0, width: 106, height: 106 },
   center: { alignItems: "center", justifyContent: "center" },
 }));
