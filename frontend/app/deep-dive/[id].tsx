@@ -5,8 +5,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
-  useSharedValue, useAnimatedStyle, useAnimatedScrollHandler, useAnimatedRef,
-  runOnJS, interpolate, Extrapolation, SharedValue,
+  useSharedValue, useAnimatedStyle, useAnimatedScrollHandler, useAnimatedRef, useAnimatedReaction,
+  runOnJS, interpolate, Extrapolation, SharedValue, scrollTo, withTiming, Easing,
 } from "react-native-reanimated";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -106,11 +106,14 @@ export default function DeepDive() {
   const coverTop = insets.top + spacing.lg;
   const pageBottom = insets.bottom + spacing.lg;
   // Copertina alta quanto lo spazio libero lo consente (fino a un quadrato
-  // pieno), lasciando sotto quel che serve a titolo, intro, scheda e tasti.
-  const cardH = Math.max(150, Math.min(Math.round(cardW * 1.02), pageH - coverTop - pageBottom - 450));
+  // pieno): si misura la scheda sotto (titolo, intro, griglia, tasti) e la
+  // card prende tutto il resto della pagina.
+  const [sheetH, setSheetH] = useState(430);
+  const cardH = Math.max(150, Math.min(Math.round(cardW * 1.02), pageH - coverTop - pageBottom - sheetH));
   const cover: CoverFrame = { top: coverTop, left: (winW - columnW) / 2 + spacing.xl, width: cardW, height: cardH, radius: 22 };
-  // La trasformazione in sfondo è completa qui.
-  const morphEnd = cover.top + Math.round(cardH * 0.75);
+  // La trasformazione in sfondo è completa qui (tutta l'altezza della card:
+  // così, scorrendo al primo capitolo, la crescita è distesa e non "scatta").
+  const morphEnd = cover.top + cardH;
   // Ultimo scroll programmatico (apertura su un capitolo, ripresa): solo un
   // movimento del lettore oltre quel punto conta come "gesto" per salvare.
   const autoY = useSharedValue(0);
@@ -141,11 +144,21 @@ export default function DeepDive() {
     },
   });
 
+  // Scroll programmatico "morbido" (tasto Leggi): la posizione è animata con
+  // una curva dolce e applicata allo ScrollView frame per frame, così la
+  // copertina si trasforma in sfondo in modo fluido invece di un flash.
+  const autoScroll = useSharedValue(-1);
+  useAnimatedReaction(
+    () => autoScroll.value,
+    (y, prev) => { if (y >= 0 && y !== prev) scrollTo(scrollRef, 0, y, false); },
+  );
   const scrollToSection = useCallback((i: number, animated = true) => {
     const target = i * pageH;
     autoY.value = target;
-    scrollRef.current?.scrollTo({ y: target, animated });
-  }, [pageH, scrollRef, autoY]);
+    if (!animated) { scrollRef.current?.scrollTo({ y: target, animated: false }); return; }
+    autoScroll.value = scrollY.value;
+    autoScroll.value = withTiming(target, { duration: 900, easing: Easing.inOut(Easing.cubic) });
+  }, [pageH, scrollRef, autoY, autoScroll, scrollY]);
 
   // Punti di aggancio: l'inizio di ogni pagina (l'ultima può essere più alta:
   // la fine del contenuto è comunque un punto di arrivo, snapToEnd).
@@ -310,7 +323,7 @@ export default function DeepDive() {
           <ReaderPage height={pageH} paddingTop={cover.top} paddingBottom={pageBottom} center={false} testID="deep-dive-page-intro">
             {(compact) => (<>
             <View style={[styles.coverArea, { height: cardH, width: cardW }]} testID="deep-dive-cover-card" />
-            <View style={styles.sheet}>
+            <View style={styles.sheet} onLayout={(e) => { const h = Math.ceil(e.nativeEvent.layout.height); if (h > 0 && h !== sheetH) setSheetH(h); }}>
               <View style={styles.sheetInner}>
                 <View style={styles.heroTitleWrap} onLayout={(e) => { bigTitleY.value = Math.round(e.nativeEvent.layout.y); }}>
                   <CoverTitle title={story.title} highlight={story.highlight_words} reveal={headerReveal} />

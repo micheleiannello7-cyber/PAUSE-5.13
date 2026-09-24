@@ -419,3 +419,4 @@ Richiesta utente (IT): all'apertura le copertine arrivavano dopo qualche secondo
 - Home: tessere categoria più basse (altezza = 1.12× larghezza), etichetta ravvicinata; icona 3D ingrandita del 20% (82% della larghezza) senza toccare il contenitore.
 - Card Home: pillola categoria usa l'icona 3D attuale (`CategoryArtMark` plain/tight) al posto della vecchia icona a linea.
 - Presentazione storia: lampadina/libri ingranditi (compensano i margini trasparenti del PNG) per allinearsi alle altre due tessere; copertina più alta (fino a 1.02× larghezza) per usare lo spazio vuoto in basso.
+- Introduzione storia: l'altezza della copertina è ora calcolata misurando la scheda sotto (onLayout) → occupa tutto lo spazio libero della pagina (max 1.02× larghezza). Tasto "Leggi": scroll animato con Reanimated (withTiming 900ms, easeInOut cubic + scrollTo in worklet) e morph copertina→sfondo disteso su tutta l'altezza della card, niente più "flash".
