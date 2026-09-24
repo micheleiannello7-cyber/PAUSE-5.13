@@ -10,6 +10,10 @@ import { HomeStoryCard } from "./home-story-card";
 
 type Props = { deck: StoryPreview[]; cursor: number; width: number; height: number; onChange: (index: number) => void; onOpen: (story: StoryPreview) => void; onListen?: (story: StoryPreview) => void };
 
+// Molla del centraggio: lenta e morbida, con un atterraggio appena molleggiato
+// (rapporto di smorzamento ≈ 0,75 → rimbalzo di pochi pixel, poi ferma).
+const SNAP_SPRING = { damping: 15, stiffness: 100, mass: 1, restDisplacementThreshold: 0.3, restSpeedThreshold: 0.3 };
+
 // Linea temporale, non anello: a sinistra ci sono solo le card già fatte
 // scorrere, a destra quelle ancora da vedere. Alla prima apertura nulla a sinistra.
 export function HomeStoryDeck({ deck, cursor, width, height, onChange, onOpen, onListen }: Props) {
@@ -87,7 +91,9 @@ export function HomeStoryDeck({ deck, cursor, width, height, onChange, onOpen, o
     nudge.value = 0;
     armIdle();
     Haptics.selectionAsync().catch(() => {});
-    tx.value = withTiming(-direction * stride, { duration: 300, easing: Easing.out(Easing.cubic) }, (finished) => {
+    // Corsa lenta e morbida con un "atterraggio" molleggiato appena percettibile
+    // (smorzamento ≈ 0,75 → sovraelongazione ~3%, un dito di rimbalzo).
+    tx.value = withSpring(-direction * stride, SNAP_SPRING, (finished) => {
       if (!finished) return;
       // The already-painted neighbour becomes central before React commits.
       position.value = nextPage;
@@ -109,9 +115,9 @@ export function HomeStoryDeck({ deck, cursor, width, height, onChange, onOpen, o
       if (busy.value) return;
       if (canNext && (event.translationX < -stride * 0.17 || event.velocityX < -450)) runOnJS(move)(1);
       else if (canPrev && (event.translationX > stride * 0.17 || event.velocityX > 450)) runOnJS(move)(-1);
-      else tx.value = withSpring(0, { damping: 24, stiffness: 220 });
+      else tx.value = withSpring(0, SNAP_SPRING);
     })
-    .onFinalize((_event, success) => { if (!success && !busy.value) tx.value = withSpring(0); }), [busy, tx, dragged, canPrev, canNext, stride, move, stopNudge]);
+    .onFinalize((_event, success) => { if (!success && !busy.value) tx.value = withSpring(0, SNAP_SPRING); }), [busy, tx, dragged, canPrev, canNext, stride, move, stopNudge]);
 
   const slots = [canPrev ? -1 : null, 0, canNext ? 1 : null].filter((s): s is number => s !== null);
   const dotCount = Math.min(deck.length, 7);
