@@ -38,18 +38,22 @@ export function ReaderHeader({
   const { colors } = useTheme();
   const bg = useAnimatedStyle(() => ({ opacity: solid.value }));
   const show = useAnimatedStyle(() => ({ opacity: reveal.value, transform: [{ translateY: (1 - reveal.value) * 8 }] }));
+  const scrim = useAnimatedStyle(() => ({ opacity: reveal.value }));
   // Solo transform (niente larghezza animata → nessun layout per frame).
   const fill = useAnimatedStyle(() => ({ transform: [{ scaleX: Math.max(0.001, Math.min(1, progress.value)) }] }));
 
   return (
     <View style={[styles.wrap, { paddingTop: topInset }]} testID="reader-header">
-      {/* Scrim leggero sulla foto, per la leggibilità di titolo e pulsanti. */}
-      <LinearGradient
-        pointerEvents="none"
-        colors={[withAlpha(colors.surface, 0.92), withAlpha(colors.surface, 0.62), withAlpha(colors.surface, 0)]}
-        locations={[0, 0.7, 1]}
-        style={StyleSheet.absoluteFill}
-      />
+      {/* Scrim leggero sulla foto, per la leggibilità di titolo e pulsanti:
+          compare solo insieme alla barra, così la copertina dell'introduzione
+          resta pulita fino in alto. */}
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, scrim]}>
+        <LinearGradient
+          colors={[withAlpha(colors.surface, 0.92), withAlpha(colors.surface, 0.62), withAlpha(colors.surface, 0)]}
+          locations={[0, 0.7, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
       {/* Fondo in vetro, molto trasparente, che appare scorrendo oltre la copertina. */}
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.solid, bg]} />
       <View style={styles.row}>
