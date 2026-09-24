@@ -1,12 +1,12 @@
 import { useRef, useCallback, useEffect, useState } from "react";
 import {
-  View, Text, StyleSheet, ActivityIndicator, Share, useWindowDimensions, LayoutChangeEvent,
+  View, Text, StyleSheet, ActivityIndicator, Share, useWindowDimensions, LayoutChangeEvent, Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   useSharedValue, useAnimatedStyle, useAnimatedScrollHandler, useAnimatedRef, useAnimatedReaction,
-  runOnJS, interpolate, Extrapolation, SharedValue, scrollTo, withTiming, Easing,
+  runOnJS, interpolate, Extrapolation, SharedValue, scrollTo, withSpring, cancelAnimation,
 } from "react-native-reanimated";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -32,6 +32,10 @@ import { Screen } from "@/src/components/screen";
 import { StoryShareCard, SHARE_CARD_WIDTH } from "@/src/components/story-share-card";
 import { useI18n } from "@/src/i18n";
 import { CoachTip } from "@/src/coach-tips";
+
+// Molla del cambio pagina: lenta e morbida (≈0,8 s), smorzamento ≈0,85 →
+// arriva e si assesta di pochi pixel, senza rimbalzi evidenti.
+const PAGE_SPRING = { damping: 16, stiffness: 90, mass: 1, restDisplacementThreshold: 0.3, restSpeedThreshold: 0.3 };
 
 // Lettura verticale a cascata: copertina in alto, poi introduzione, capitoli
 // e conclusione uno dopo l'altro in un'unica pagina scrollabile. Le "sezioni"
@@ -124,6 +128,16 @@ export default function DeepDive() {
   const touchedSV = useSharedValue(false);
   const markTouched = () => { touchedRef.current = true; touchedSV.value = true; };
 
+  // Scroll programmatico "morbido" (tasto Leggi e cambio pagina): la posizione
+  // è animata con una molla lenta e applicata allo ScrollView frame per frame,
+  // così la copertina si trasforma in sfondo in modo fluido e ogni pagina
+  // "atterra" dolcemente (nessun rimbalzo visibile, solo un assestamento).
+  const autoScroll = useSharedValue(-1);
+  useAnimatedReaction(
+    () => autoScroll.value,
+    (y, prev) => { if (y >= 0 && y !== prev) scrollTo(scrollRef, 0, y, false); },
+  );
+  const dragStartPage = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler({
     onScroll: (e) => {
       const y = e.contentOffset.y;
@@ -146,27 +160,44 @@ export default function DeepDive() {
         runOnJS(setSection)(idx);
       }
     },
+    onBeginDrag: (e) => {
+      // Il dito interrompe qualsiasi movimento automatico.
+      cancelAnimation(autoScroll);
+      autoScroll.value = -1;
+      dragStartPage.value = Math.max(0, Math.min(sectionCount - 1, Math.round(e.contentOffset.y / pageHSV.value)));
+    },
+    onEndDrag: (e) => {
+      if (Platform.OS === "web") return;
+      const y = e.contentOffset.y;
+      const ph = pageHSV.value;
+      const last = sectionCount - 1;
+      const from = dragStartPage.value;
+      // Ultima pagina (può essere più alta dello schermo): sotto il suo inizio si scorre liberi.
+      if (from === last && y >= last * ph) return;
+      const delta = y - from * ph;
+      // La velocità del dito conta solo come "spinta" nella direzione del
+      // trascinamento (il segno cambia tra piattaforme, il verso di delta no).
+      const flick = Math.abs(e.velocity?.y ?? 0) > 0.3;
+      let target = from;
+      if (delta > ph * 0.16 || (flick && delta > 12)) target = from + 1;
+      else if (delta < -ph * 0.16 || (flick && delta < -12)) target = from - 1;
+      target = Math.max(0, Math.min(last, target));
+      autoScroll.value = y;
+      autoScroll.value = withSpring(target * ph, PAGE_SPRING);
+    },
   });
 
-  // Scroll programmatico "morbido" (tasto Leggi): la posizione è animata con
-  // una curva dolce e applicata allo ScrollView frame per frame, così la
-  // copertina si trasforma in sfondo in modo fluido invece di un flash.
-  const autoScroll = useSharedValue(-1);
-  useAnimatedReaction(
-    () => autoScroll.value,
-    (y, prev) => { if (y >= 0 && y !== prev) scrollTo(scrollRef, 0, y, false); },
-  );
   const scrollToSection = useCallback((i: number, animated = true) => {
     const target = i * pageH;
     autoY.value = target;
     if (!animated) { scrollRef.current?.scrollTo({ y: target, animated: false }); return; }
     autoScroll.value = scrollY.value;
-    autoScroll.value = withTiming(target, { duration: 900, easing: Easing.inOut(Easing.cubic) });
+    autoScroll.value = withSpring(target, PAGE_SPRING);
   }, [pageH, scrollRef, autoY, autoScroll, scrollY]);
 
-  // Punti di aggancio: l'inizio di ogni pagina (l'ultima può essere più alta:
-  // la fine del contenuto è comunque un punto di arrivo, snapToEnd).
-  const snapOffsets = Array.from({ length: sectionCount }, (_, i) => i * pageH);
+  // Sul web (anteprima) restano gli agganci nativi; su iOS/Android il cambio
+  // pagina è la molla qui sopra, con inerzia quasi nulla del dito.
+  const snapOffsets = Platform.OS === "web" ? Array.from({ length: sectionCount }, (_, i) => i * pageH) : undefined;
   const onScrollLayout = (e: LayoutChangeEvent) => {
     const h = Math.round(e.nativeEvent.layout.height);
     if (h > 0 && h !== pageH) { setPageH(h); pageHSV.value = h; }
@@ -314,8 +345,8 @@ export default function DeepDive() {
           onScrollBeginDrag={markTouched}
           onLayout={onScrollLayout}
           snapToOffsets={snapOffsets}
-          disableIntervalMomentum
-          decelerationRate="fast"
+          disableIntervalMomentum={Platform.OS === "web"}
+          decelerationRate={Platform.OS === "web" ? "fast" : 0.1}
           showsVerticalScrollIndicator={false}
           style={styles.scroll}
           testID="deep-dive-scroll"
